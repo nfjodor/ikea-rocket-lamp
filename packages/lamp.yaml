@@ -150,7 +150,7 @@ light:
     name: Lamp
     pin: ${led_pin}
     num_leds: ${num_leds}
-    rgb_order: ${led_rgb_order}
+    channel_colors: ${led_rgb_order}
     chipset: ${led_chipset}
     restore_mode: RESTORE_DEFAULT_OFF
     default_transition_length: ${fade_ms}ms
