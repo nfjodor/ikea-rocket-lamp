@@ -60,7 +60,7 @@ The firmware installs as an ESPHome package straight from GitHub.
 ## 🎬 Demo
 
 <p align="center">
-  <video src="https://github.com/user-attachments/assets/e4ca0b96-56af-4a7d-b8fb-becc9f473271" controls muted playsinline width="360"></video>
+  <video src="/user-attachments/assets/e4ca0b96-56af-4a7d-b8fb-becc9f473271" />
 </p>
 
 <p align="center">
