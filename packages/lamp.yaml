@@ -181,22 +181,14 @@ light:
           update_interval: 16ms
           lambda: |-
             ${fade_begin}
-            // Per-pixel flicker: each LED eases towards a random target level
-            // and picks a new one when it gets there, with occasional deeper dips.
-            static std::vector<float> level, target;
-            if ((int32_t) level.size() != it.size()) {
-              level.assign(it.size(), 255.0f);
-              target.assign(it.size(), 255.0f);
+            static float level = 255.0f, target = 255.0f;
+            level += (target - level) * 0.25f;
+            if (std::abs(target - level) < 4.0f) {
+              const float depth = random_float() < 0.08f ? 0.55f : 0.25f;
+              target = 255.0f * (1.0f - depth * random_float());
             }
-            for (int32_t i = 0; i < it.size(); i++) {
-              level[i] += (target[i] - level[i]) * 0.25f;
-              if (std::abs(target[i] - level[i]) < 4.0f) {
-                const float depth = random_float() < 0.08f ? 0.55f : 0.25f;
-                target[i] = 255.0f * (1.0f - depth * random_float());
-              }
-            }
-            const Color flame(255, 110, 20);
-            auto frame = [&](int32_t i) { return flame * (uint8_t) level[i]; };
+            const Color color = Color(255, 110, 20) * (uint8_t) level;
+            auto frame = [&](int32_t) { return color; };
             ${fade_show}
       - addressable_lambda:
           name: Warm White
