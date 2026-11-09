@@ -59,9 +59,7 @@ The firmware installs as an ESPHome package straight from GitHub.
 
 ## 🎬 Demo
 
-<p align="center">
-  <video src="https://github.com/user-attachments/assets/e4ca0b96-56af-4a7d-b8fb-becc9f473271" />
-</p>
+https://github.com/user-attachments/assets/cf82f476-0f0d-4c87-8bef-dffe335c4a18
 
 <p align="center">
   <sub>Video not playing? <a href="docs/images/demo.mp4">▶️ Open the demo video</a></sub>
