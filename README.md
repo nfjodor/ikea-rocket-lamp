@@ -156,8 +156,11 @@ The firmware also lowers the Wi-Fi TX power (8.5 dB), which saves a little power
 ```mermaid
 flowchart LR
     ADP(["🔌 IKEA ICPSW24-3-3<br/>24 V DC · 3 W"]) -- "24 V" --> BUCK["⚡ CR-4030L buck<br/>24 V → 5 V"]
+    ADP -- "GND" --- BUCK
     BUCK -- "5 V" --> V5
+    BUCK -- "GND" --- G
     BUCK -- "5 V" --> LED
+    BUCK -- "GND" --- LED
     subgraph MCU["ESP32-C3 Super Mini"]
         direction TB
         V5["5V"]
@@ -166,7 +169,6 @@ flowchart LR
         IO0["GPIO0"]
     end
     IO3 -- "data" --> LED["💡 WS2812 ring<br/>12 LEDs · Ø 37 mm"]
-    G --- LED
     IO0 --- BTN["🔘 Push button"]
     BTN --- G
 ```
@@ -174,12 +176,10 @@ flowchart LR
 ### Circuit board
 
 <p align="center">
-  <img src="docs/images/pcb-placeholder.svg" alt="Rocket Lamp circuit board (placeholder)" width="700">
+  <a href="https://app.cirkitdesigner.com/project/2a295333-1f8f-4950-9f45-bd626191a41b" target="_blank">
+    <img src="docs/images/pcb-placeholder.svg" alt="Rocket Lamp circuit board (placeholder)" width="100%">
+  </a>
 </p>
-
-> [!TIP]
-> Replace [`docs/images/pcb-placeholder.svg`](docs/images/pcb-placeholder.svg) with a photo or
-> render of your board (e.g. `docs/images/pcb.jpg`) and update the link above.
 
 ### Build steps
 
