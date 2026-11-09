@@ -15,7 +15,7 @@ rainbow & candle effects, a nightlight, stepless dimming and full Home Assistant
 The firmware installs as an ESPHome package straight from GitHub.
 
 [Features](#-features) •
-[Gallery](#-gallery) •
+[Demo](#-demo) •
 [The mod](#-the-hardware-mod) •
 [Install](#-firmware-installation) •
 [Controls](#-button-controls) •
@@ -57,19 +57,15 @@ The firmware installs as an ESPHome package straight from GitHub.
 | 📦 **Remote package** | Pull the firmware from GitHub, keep only Wi-Fi + key in your own YAML |
 | 🔐 **Secure by default** | Encrypted API *and* encrypted OTA updates with a single key |
 
-## 📸 Gallery
+## 🎬 Demo
 
-> [!NOTE]
-> These are placeholders – real photos are coming soon. Drop your pictures into
-> [`docs/images/`](docs/images) and update the links below.
+<p align="center">
+  <video src="docs/images/demo.mp4" controls muted playsinline width="360"></video>
+</p>
 
-<table>
-  <tr>
-    <td align="center"><img src="docs/images/photo-placeholder-1.svg" alt="Modded AFTONSPARV in rainbow mode" width="260"><br><sub><b>Rainbow mode</b></sub></td>
-    <td align="center"><img src="docs/images/photo-placeholder-2.svg" alt="Modded AFTONSPARV in candle mode" width="260"><br><sub><b>Candle mode</b></sub></td>
-    <td align="center"><img src="docs/images/photo-placeholder-3.svg" alt="Modded AFTONSPARV as a nightlight" width="260"><br><sub><b>Nightlight</b></sub></td>
-  </tr>
-</table>
+<p align="center">
+  <sub>Video not playing? <a href="docs/images/demo.mp4">▶️ Open the demo video</a></sub>
+</p>
 
 ## 🔧 The hardware mod
 
@@ -177,37 +173,86 @@ flowchart LR
 
 <p align="center">
   <a href="https://app.cirkitdesigner.com/project/2a295333-1f8f-4950-9f45-bd626191a41b" target="_blank">
-    <img src="docs/images/pcb-placeholder.svg" alt="Rocket Lamp circuit board (placeholder)" width="100%">
+    <img src="docs/images/pcb.svg" alt="Rocket Lamp circuit diagram" width="100%">
   </a>
 </p>
 
 ### Build steps
 
+#### 1. Flash first
+
+Install the firmware on the ESP32-C3 over USB *before* it goes into the lamp
+(see [Firmware installation](#-firmware-installation)). Later updates happen over Wi-Fi.
+
+#### 2. Open the lamp and remove the stock electronics
+
+Unplug the lamp and unscrew the base – IKEA ships the adapter and fins inside it, so it's designed
+to come apart with a screwdriver. Take out the original LED board and controller.
+
+#### 3. Reuse the power connector
+
+Keep the lamp's DC socket for the IKEA adapter and solder a red/black pair of wires to it – it will
+feed the step-down regulator. Check the polarity with a multimeter before you connect anything.
+
+<p align="center">
+  <img src="docs/images/reusing_power_connector.jpg" alt="The lamp's original DC socket with new red and black wires soldered on" width="420">
+</p>
+
+#### 4. Wire the step-down regulator
+
+Solder the DC socket wires to the CR-4030L input, and a 5 V/GND pair from its output to each of the
+ESP32-C3 and the LED ring (see the [wiring table](#wiring)). Power it from the IKEA adapter on its own
+first and make sure a multimeter reads **5.0 V** on the output – a wrong variant would destroy the
+ESP32 and the LEDs.
+
+<p align="center">
+  <img src="docs/images/step_down_regulator.jpg" alt="CR-4030L step-down regulator with input and output wires soldered on" width="420">
+</p>
+
+#### 5. Wire the LED ring
+
+Solder 5 V, GND and the data wire (to the ring's `DIN`, not `DOUT`) to the 37 mm ring.
+
+<p align="center">
+  <img src="docs/images/led_ring.jpg" alt="12-LED WS2812 ring with power and data wires soldered on" width="420">
+</p>
+
+#### 6. Mount the LED ring under the lens
+
+The stock acrylic lens has 12 domes arranged in a circle – line up each LED of the ring with one dome
+and fix the ring in place.
+
+<p align="center">
+  <img src="docs/images/led_ring_on_lens.jpg" alt="LED ring fitted behind the lamp's acrylic lens, each LED under one lens dome" width="320">
+</p>
+
+#### 7. Mount the button and the ESP32-C3
+
+Hot-glue the push button and the ESP32-C3 onto small pieces of clear plastic, so they can be fixed
+firmly inside the base. The button sits at the front of the base, where it's pressed in the
+[demo video](#-demo). Insulate every joint with heat-shrink.
+
 <table>
   <tr>
-    <td align="center"><img src="docs/images/build-placeholder-1.svg" alt="AFTONSPARV opened up with the stock electronics" width="380"><br><sub><b>Stock internals</b></sub></td>
-    <td align="center"><img src="docs/images/build-placeholder-2.svg" alt="AFTONSPARV with the new electronics fitted" width="380"><br><sub><b>New electronics fitted</b></sub></td>
+    <td align="center"><img src="docs/images/button_on_plastic.jpg" alt="Push button hot-glued onto a piece of clear plastic" width="400"><br><sub><b>Button on plastic</b></sub></td>
+    <td align="center"><img src="docs/images/esp32_on_plastic.jpg" alt="ESP32-C3 Super Mini hot-glued onto a piece of clear plastic" width="400"><br><sub><b>ESP32-C3 on plastic</b></sub></td>
   </tr>
 </table>
 
-1. **Flash first.** Install the firmware on the ESP32-C3 over USB *before* it goes into the lamp
-   (see [Firmware installation](#-firmware-installation)). Later updates happen over Wi-Fi.
-2. **Unplug and open the lamp.** Unscrew the base – IKEA ships the adapter and fins inside it,
-   so it's designed to come apart with a screwdriver.
-3. **Remove the stock electronics.** Take out the original LED board and controller. Keep the
-   lamp's DC input (socket or cable) for the IKEA adapter, because it powers the buck converter.
-   Check its polarity with a multimeter before you wire anything to it.
-4. **Check the buck converter.** The CR-4030L (6–32 V → 5 V version) has a fixed output, so there's
-   nothing to adjust – but power it from the IKEA adapter on its own and make sure a multimeter reads
-   5.0 V on the output (a wrong variant would destroy the ESP32 and LEDs). Do this **before** you
-   connect anything else.
-5. **Fit the LED ring** (37 mm outside, 23 mm inside diameter) where the original LED board sat,
-   LEDs facing the acrylic lens.
-6. **Fit the new push button** somewhere easy to reach, for example in the base.
-7. **Wire it up** as shown in the [wiring table](#wiring). Insulate every joint with heat-shrink and
-   fix the boards with hot glue or foam tape so nothing can rattle loose.
-8. **Test before closing.** Plug in the adapter. The lamp should join Wi-Fi and react to the button.
-   Then screw the base back on.
+#### 8. Assemble
+
+Put the lens with the LED ring back into the lamp, then route the wires inside the base: the DC socket
+goes into its original slot and the ESP32-C3 and button fit between the ribs of the base. Keep the
+wires clear of the screw posts. Plug in the adapter and test that the lamp joins Wi-Fi and reacts to
+the button **before** you close everything up, then attach the fins.
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/images/assemble_1.jpg" alt="Lamp section with the lens and LED ring fitted, electronics still outside" width="260"><br><sub><b>Lens and LED ring fitted</b></sub></td>
+    <td align="center"><img src="docs/images/assemble_2.jpg" alt="Inside of the base with the DC socket, ESP32-C3, button and wiring in place" width="260"><br><sub><b>Electronics in the base</b></sub></td>
+    <td align="center"><img src="docs/images/assemble_3.jpg" alt="Base closed up with the red fins attached" width="340"><br><sub><b>Fins on</b></sub></td>
+  </tr>
+</table>
 
 > [!IMPORTANT]
 > Never connect USB to the ESP32-C3 while the lamp is powered from the IKEA adapter. On many Super Mini
@@ -461,7 +506,7 @@ rocket-lamp/
 ├── example.yaml                         # 📝 device config that pulls from GitHub
 ├── dev.yaml                             # 🛠️ device config that builds from this checkout
 ├── secrets.example.yaml                 # 🔑 template for secrets.yaml
-└── docs/images/                         # 🖼️ banner, board, build and product photos
+└── docs/images/                         # 🖼️ banner, circuit, build photos and demo video
 ```
 
 ## 🛠️ Development
