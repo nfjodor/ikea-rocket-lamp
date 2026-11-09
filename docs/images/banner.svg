@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="400" viewBox="0 0 1200 400" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f172a"/>
+      <stop offset="0.6" stop-color="#1e1b4b"/>
+      <stop offset="1" stop-color="#312e81"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#fbbf24" stop-opacity="0.55"/>
+      <stop offset="0.5" stop-color="#f472b6" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#6366f1" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#cbd5e1"/>
+      <stop offset="0.45" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#94a3b8"/>
+    </linearGradient>
+    <linearGradient id="flame" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fef08a"/>
+      <stop offset="0.45" stop-color="#fb923c"/>
+      <stop offset="1" stop-color="#ef4444" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="title" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#fde68a"/>
+      <stop offset="0.5" stop-color="#f9a8d4"/>
+      <stop offset="1" stop-color="#a5b4fc"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="400" fill="url(#sky)"/>
+
+  <g fill="#fff">
+    <circle cx="80" cy="60" r="1.6" opacity="0.8"/>
+    <circle cx="420" cy="40" r="1.2" opacity="0.6"/>
+    <circle cx="560" cy="330" r="1.4" opacity="0.5"/>
+    <circle cx="700" cy="70" r="1.8" opacity="0.7"/>
+    <circle cx="860" cy="350" r="1.2" opacity="0.6"/>
+    <circle cx="1010" cy="50" r="1.6" opacity="0.8"/>
+    <circle cx="1130" cy="140" r="1.2" opacity="0.5"/>
+    <circle cx="1150" cy="300" r="1.8" opacity="0.7"/>
+    <circle cx="40" cy="320" r="1.4" opacity="0.6"/>
+    <circle cx="330" cy="360" r="1.2" opacity="0.5"/>
+    <circle cx="960" cy="200" r="1" opacity="0.5"/>
+  </g>
+
+  <circle cx="240" cy="200" r="190" fill="url(#glow)"/>
+
+  <g transform="translate(240 190) rotate(30)">
+    <path d="M-20,74 Q0,190 20,74 Z" fill="url(#flame)"/>
+    <path d="M-10,74 Q0,140 10,74 Z" fill="#fffbeb" opacity="0.9"/>
+    <path d="M-40,15 L-80,85 L-38,70 Z" fill="#ef4444"/>
+    <path d="M40,15 L80,85 L38,70 Z" fill="#dc2626"/>
+    <rect x="-24" y="60" width="48" height="16" rx="4" fill="#64748b"/>
+    <path d="M0,-120 C42,-78 48,-10 40,64 L-40,64 C-48,-10 -42,-78 0,-120 Z" fill="url(#body)"/>
+    <path d="M0,-120 C18,-102 28,-84 33,-66 L-33,-66 C-28,-84 -18,-102 0,-120 Z" fill="#ef4444"/>
+    <circle cy="-22" r="20" fill="#0f172a" stroke="#94a3b8" stroke-width="6"/>
+    <circle cy="-22" r="12" fill="#fbbf24"/>
+    <circle cx="-5" cy="-27" r="4" fill="#fff" opacity="0.8"/>
+    <rect x="-3" y="10" width="6" height="40" rx="3" fill="#cbd5e1"/>
+  </g>
+
+  <text x="470" y="175" font-size="84" font-weight="800" fill="url(#title)">Rocket Lamp</text>
+  <text x="474" y="225" font-size="26" fill="#cbd5e1">A smart ESPHome upgrade for IKEA's AFTONSPARV lamp</text>
+
+  <g font-size="18" font-weight="600">
+    <rect x="474" y="262" width="190" height="36" rx="18" fill="#0058a3" stroke="#ffdb00"/>
+    <text x="569" y="286" fill="#ffdb00" text-anchor="middle">IKEA AFTONSPARV</text>
+    <rect x="676" y="262" width="122" height="36" rx="18" fill="#1e293b" stroke="#475569"/>
+    <text x="737" y="286" fill="#e2e8f0" text-anchor="middle">ESP32-C3</text>
+    <rect x="810" y="262" width="150" height="36" rx="18" fill="#1e293b" stroke="#475569"/>
+    <text x="885" y="286" fill="#e2e8f0" text-anchor="middle">WS2812 LEDs</text>
+    <rect x="972" y="262" width="182" height="36" rx="18" fill="#1e293b" stroke="#475569"/>
+    <text x="1063" y="286" fill="#e2e8f0" text-anchor="middle">Home Assistant</text>
+  </g>
+</svg>

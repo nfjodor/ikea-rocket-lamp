@@ -1,0 +1,52 @@
+# Rocket Lamp – complete firmware package for the IKEA AFTONSPARV rocket lamp
+# mod (ESP32-C3 Super Mini + 37 mm 12x WS2812 ring + push button, powered from
+# the stock 24 V adapter through a CR-4030L 6-32 V -> 5 V buck converter).
+#
+# Use it from your own device config (see README.md):
+#
+#   packages:
+#     rocket_lamp: github://nfjodor/ikea-rocket-lamp/rocket-lamp.yaml@main
+#
+# Remote packages can't use !secret, so Wi-Fi credentials and the API
+# encryption key belong in your device config. Every substitution below (and in
+# the included packages) can be overridden there as well.
+
+substitutions:
+  name: rocket-lamp
+  friendly_name: Rocket Lamp
+
+packages:
+  board: !include packages/board-esp32-c3-supermini.yaml
+  lamp: !include packages/lamp.yaml
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  # OTA encryption (below) was added in 2026.9.0.
+  min_version: 2026.9.0
+  project:
+    name: nfjodor.ikea-rocket-lamp
+    version: "1.0.0"
+
+# Lets the ESPHome Device Builder "adopt" a lamp that was flashed with this
+# config and turn it into a small device config that pulls this package.
+dashboard_import:
+  package_import_url: github://nfjodor/ikea-rocket-lamp/rocket-lamp.yaml@main
+  import_full_config: false
+
+logger:
+
+# Your device config adds `encryption: key: !secret ...` here.
+api:
+
+ota:
+  - platform: esphome
+    id: ota_esphome
+    # Reuses the API encryption key from your device config.
+    encryption:
+
+wifi:
+  ap:
+    ssid: "${friendly_name} Fallback"
+
+captive_portal:

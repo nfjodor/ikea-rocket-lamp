@@ -1,0 +1,10 @@
+# ESPHome
+secrets.yaml
+.esphome/
+/.pioenvs/
+/.piolibdeps/
+
+# Local tooling
+.idea/
+.codegraph/
+.DS_Store

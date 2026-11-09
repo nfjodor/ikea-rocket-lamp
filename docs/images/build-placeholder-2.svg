@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="560" viewBox="0 0 800 560" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <rect width="800" height="560" fill="#0f172a"/>
+  <rect x="20" y="20" width="760" height="520" rx="22" fill="none" stroke="#475569" stroke-width="3" stroke-dasharray="14 10"/>
+
+  <!-- opened base seen from below -->
+  <circle cx="400" cy="230" r="150" fill="#dc2626"/>
+  <circle cx="400" cy="230" r="128" fill="#1e293b"/>
+  <g fill="#94a3b8">
+    <circle cx="400" cy="112" r="6"/><circle cx="502" cy="289" r="6"/><circle cx="298" cy="289" r="6"/>
+  </g>
+  <!-- WS2812 ring -->
+  <circle cx="400" cy="230" r="72" fill="none" stroke="#020617" stroke-width="26"/>
+  <g fill="#f8fafc">
+    <circle cx="400" cy="158" r="7"/><circle cx="436" cy="168" r="7"/><circle cx="462" cy="194" r="7"/><circle cx="472" cy="230" r="7"/>
+    <circle cx="462" cy="266" r="7"/><circle cx="436" cy="292" r="7"/><circle cx="400" cy="302" r="7"/><circle cx="364" cy="292" r="7"/>
+    <circle cx="338" cy="266" r="7"/><circle cx="328" cy="230" r="7"/><circle cx="338" cy="194" r="7"/><circle cx="364" cy="168" r="7"/>
+  </g>
+  <!-- ESP32-C3 + buck -->
+  <rect x="368" y="200" width="64" height="44" rx="4" fill="#334155" stroke="#64748b" stroke-width="2"/>
+  <text x="400" y="227" font-size="11" font-weight="700" fill="#e2e8f0" text-anchor="middle">ESP32-C3</text>
+  <rect x="376" y="250" width="48" height="20" rx="3" fill="#1d4ed8"/>
+  <text x="400" y="264" font-size="9" font-weight="700" fill="#e0f2fe" text-anchor="middle">CR-4030L</text>
+  <!-- button -->
+  <rect x="285" y="340" width="34" height="34" rx="5" fill="#cbd5e1"/>
+  <circle cx="302" cy="357" r="9" fill="#475569"/>
+  <text x="400" y="440" font-size="30" font-weight="800" fill="#f8fafc" text-anchor="middle">New electronics fitted</text>
+  <text x="400" y="474" font-size="18" fill="#94a3b8" text-anchor="middle">Build photo coming soon</text>
+  <text x="400" y="504" font-size="14" fill="#64748b" text-anchor="middle">Replace docs/images/build-placeholder-2.svg</text>
+</svg>

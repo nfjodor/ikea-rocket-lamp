@@ -1,0 +1,31 @@
+# Example device config for a modded IKEA AFTONSPARV rocket lamp: builds the
+# firmware straight from GitHub.
+# Copy this file (and secrets.example.yaml -> secrets.yaml) into your ESPHome
+# config folder, adjust it, then install.
+
+substitutions:
+  name: rocket-lamp
+  friendly_name: Rocket Lamp
+  # Optional overrides, see README.md for the full list:
+  # num_leds: "16"
+  # led_pin: GPIO4
+  # button_pin: GPIO1
+  # rainbow_speed: "5"
+  # LED output cap protecting the 3 W IKEA adapter (default 50). Only raise it
+  # after measuring the current – see "Power budget" in README.md.
+  # max_brightness_pct: "50"
+
+packages:
+  rocket_lamp:
+    url: https://github.com/nfjodor/ikea-rocket-lamp
+    ref: main           # pin a release tag (e.g. v1.0.0) for reproducible builds
+    files: [rocket-lamp.yaml]
+    refresh: 1d
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password

@@ -1,0 +1,435 @@
+# Rocket Lamp – lamp logic (light, effects, button handling).
+#
+# Board independent. The including config must provide the `led_pin` and
+# `button_pin` substitutions (packages/board-*.yaml does that) plus the usual
+# esphome / network setup. Everything below can be overridden with
+# substitutions in your own device config.
+
+substitutions:
+  num_leds: "12"        # 37 mm / 12-LED WS2812 ring used in the AFTONSPARV build
+  led_chipset: WS2812
+  led_rgb_order: GRB
+  # Hardware output cap in percent; 100% in Home Assistant drives the LEDs at
+  # this level. IKEA's 3 W adapter leaves ~550 mA at 5 V, and 12 WS2812s at
+  # full white can pull ~720 mA plus ~120 mA for the ESP32. 50 keeps the worst
+  # case (white) around 480 mA in total.
+  max_brightness_pct: "50"
+
+  # Button timing
+  click_max: 400ms      # max press duration that still counts as a click
+  click_gap: 400ms      # max pause between clicks of a double/triple click
+  long_press: 700ms     # hold time that starts nightlight / dimming
+
+  fade_ms: "250"        # on/off transition
+  mode_fade_ms: "250"   # cross-fade when switching between modes
+  dim_step_ms: "40"     # dimming loop interval
+  dim_factor: "1.06"    # multiplicative step -> perceptually even dimming
+  rainbow_speed: "2"    # full colour cycle = 65536 / speed ms (5 -> ~13 s)
+
+  # Cycle order for double click. Must match the effect names below.
+  effect_list: '"Rainbow", "Candle", "Warm White", "Solid Red", "Solid Blue", "Solid Green", "Solid Yellow", "Solid Purple", "Solid Pink"'
+  warm_white_index: "2"
+
+  # Cross-fade code shared by the effect lambdas. ESPHome runs one effect at a
+  # time, so a cross-fade is done by snapshotting whatever the strip shows when
+  # a new effect starts and blending from it.
+  # On initial_run the pixel buffer still holds the previous effect's last
+  # frame (or a half-finished fade), which becomes the starting point.
+  fade_begin: |-
+    if (initial_run) {
+      auto &from = id(fade_from);
+      from.resize(it.size());
+      for (int32_t i = 0; i < it.size(); i++) from[i] = it[i].get();
+      id(fade_start) = millis();
+    }
+  # Renders frame(i), blended with the snapshot while the fade is running.
+  fade_show: |-
+    {
+      const uint32_t elapsed = millis() - id(fade_start);
+      const uint8_t amount = elapsed >= ${mode_fade_ms} ? 255 : elapsed * 255 / ${mode_fade_ms};
+      const auto &from = id(fade_from);
+      for (int32_t i = 0; i < it.size(); i++) {
+        const Color target = frame(i);
+        if (amount == 255 || i >= (int32_t) from.size()) it[i] = target;
+        else it[i] = Color(from[i]).gradient(target, amount);
+      }
+    }
+
+globals:
+  - id: effect_index
+    type: int
+    restore_value: yes
+    initial_value: "${warm_white_index}"
+  # true while one of the cycle effects is showing; used to restore it on turn-on
+  - id: effect_active
+    type: bool
+    restore_value: yes
+    # Start in "Warm White" mode so the first turn-on matches effect_index.
+    initial_value: "true"
+  # Nightlight overwrites the brightness with 1%; the previous brightness is
+  # kept here and restored when a mode is selected again.
+  - id: nightlight_active
+    type: bool
+    restore_value: yes
+    initial_value: "false"
+  - id: brightness_before_nightlight
+    type: float
+    restore_value: yes
+    initial_value: "1.0"
+  # true = brighten, false = dim
+  - id: dim_direction
+    type: bool
+    restore_value: no
+    initial_value: "true"
+  # Cross-fade state, see fade_begin / fade_show above.
+  - id: fade_from
+    type: std::vector<esphome::Color>
+    restore_value: no
+  - id: fade_start
+    type: uint32_t
+    restore_value: no
+    initial_value: "0"
+
+script:
+  # Turn on with a fade, restoring the last brightness and (if any) the last effect.
+  # ESPHome drops the active effect on turn-off, so it is re-applied here.
+  - id: lamp_restore_on
+    mode: restart
+    then:
+      - lambda: |-
+          static const char *const EFFECTS[] = {${effect_list}};
+          const int count = sizeof(EFFECTS) / sizeof(EFFECTS[0]);
+          auto *lamp = id(lamp_light);
+
+          float target = lamp->remote_values.get_brightness();
+          if (target < 0.01f) target = 1.0f;
+
+          if (id(effect_active)) {
+            int idx = id(effect_index);
+            if (idx < 0 || idx >= count) idx = 0;
+            // Effects can't be combined with a transition, so start the effect
+            // at minimum brightness and fade the brightness up afterwards.
+            auto start = lamp->turn_on();
+            start.set_effect(std::string(EFFECTS[idx]));
+            start.set_brightness(0.01f);
+            start.perform();
+          }
+
+          auto call = lamp->turn_on();
+          call.set_brightness(target);
+          call.set_transition_length(${fade_ms});
+          call.perform();
+
+  # Stop the running effect so the colour picked in HA shows (fades over).
+  - id: show_picked_color
+    mode: restart
+    then:
+      # Defer to the next loop instead of issuing a light call from inside
+      # the light's own state callback.
+      - delay: 0s
+      - light.turn_on:
+          id: lamp_light
+          effect: None
+
+  # Leaving nightlight for a mode: fade back to the brightness used before it.
+  - id: restore_brightness_after_nightlight
+    mode: restart
+    then:
+      # Deferred for the same reason as above.
+      - delay: 0s
+      - light.turn_on:
+          id: lamp_light
+          brightness: !lambda |-
+            const float b = id(brightness_before_nightlight);
+            return b < 0.01f ? 1.0f : b;
+          transition_length: ${mode_fade_ms}ms
+
+light:
+  - platform: esp32_rmt_led_strip
+    id: lamp_light
+    name: Lamp
+    pin: ${led_pin}
+    num_leds: ${num_leds}
+    rgb_order: ${led_rgb_order}
+    chipset: ${led_chipset}
+    restore_mode: RESTORE_DEFAULT_OFF
+    default_transition_length: ${fade_ms}ms
+    # ESPHome applies gamma after brightness scaling; with the default 2.8 a
+    # 1% nightlight rounds down to black on WS2812. Linear keeps 1% visible.
+    gamma_correct: 1.0
+    # Scales every channel so the LEDs can't overload the power supply.
+    color_correct:
+      - "${max_brightness_pct}%"
+      - "${max_brightness_pct}%"
+      - "${max_brightness_pct}%"
+    # Every mode is an addressable_lambda so it can cross-fade from whatever
+    # was on the strip before (see fade_begin / fade_show in substitutions).
+    # Each one defines frame(i), the colour of LED i for the current frame.
+    effects:
+      - addressable_lambda:
+          name: Rainbow
+          update_interval: 16ms
+          lambda: |-
+            ${fade_begin}
+            // Whole-lamp rainbow: every LED shows the same hue, cycling over time.
+            const uint16_t hue = (millis() * ${rainbow_speed}) % 0x10000;
+            const Color color = light::ESPHSVColor(hue >> 8, 255, 255).to_rgb();
+            auto frame = [&](int32_t) { return color; };
+            ${fade_show}
+      - addressable_lambda:
+          name: Candle
+          update_interval: 16ms
+          lambda: |-
+            ${fade_begin}
+            // Per-pixel flicker: each LED eases towards a random target level
+            // and picks a new one when it gets there, with occasional deeper dips.
+            static std::vector<float> level, target;
+            if ((int32_t) level.size() != it.size()) {
+              level.assign(it.size(), 255.0f);
+              target.assign(it.size(), 255.0f);
+            }
+            for (int32_t i = 0; i < it.size(); i++) {
+              level[i] += (target[i] - level[i]) * 0.25f;
+              if (std::abs(target[i] - level[i]) < 4.0f) {
+                const float depth = random_float() < 0.08f ? 0.55f : 0.25f;
+                target[i] = 255.0f * (1.0f - depth * random_float());
+              }
+            }
+            const Color flame(255, 110, 20);
+            auto frame = [&](int32_t i) { return flame * (uint8_t) level[i]; };
+            ${fade_show}
+      - addressable_lambda:
+          name: Warm White
+          update_interval: 16ms
+          lambda: |-
+            ${fade_begin}
+            // ~2700-3000 K look on WS2812, whose blue is strong; equal RGB looks cold.
+            auto frame = [](int32_t) { return Color(255, 150, 60); };
+            ${fade_show}
+      - addressable_lambda:
+          name: Solid Red
+          update_interval: 16ms
+          lambda: |-
+            ${fade_begin}
+            auto frame = [](int32_t) { return Color(255, 0, 0); };
+            ${fade_show}
+      - addressable_lambda:
+          name: Solid Blue
+          update_interval: 16ms
+          lambda: |-
+            ${fade_begin}
+            auto frame = [](int32_t) { return Color(0, 0, 255); };
+            ${fade_show}
+      - addressable_lambda:
+          name: Solid Green
+          update_interval: 16ms
+          lambda: |-
+            ${fade_begin}
+            auto frame = [](int32_t) { return Color(0, 255, 0); };
+            ${fade_show}
+      - addressable_lambda:
+          name: Solid Yellow
+          update_interval: 16ms
+          lambda: |-
+            ${fade_begin}
+            // WS2812 green is much brighter than red; full green looks lime.
+            auto frame = [](int32_t) { return Color(255, 180, 0); };
+            ${fade_show}
+      - addressable_lambda:
+          name: Solid Purple
+          update_interval: 16ms
+          lambda: |-
+            ${fade_begin}
+            // Less red than blue; equal amounts read as magenta.
+            auto frame = [](int32_t) { return Color(170, 0, 255); };
+            ${fade_show}
+      - addressable_lambda:
+          name: Solid Pink
+          update_interval: 16ms
+          lambda: |-
+            ${fade_begin}
+            // A touch of green softens magenta into pink.
+            auto frame = [](int32_t) { return Color(255, 40, 120); };
+            ${fade_show}
+    on_state:
+      - lambda: |-
+          auto *lamp = id(lamp_light);
+          const auto &v = lamp->remote_values;
+          if (!v.is_on()) return;
+
+          // A colour change while an effect runs can only come from HA (the
+          // button never changes colour and effect separately). Effects paint
+          // over the base colour, so leave the effect to make the pick visible.
+          static bool seeded = false;
+          static float last_r, last_g, last_b;
+          static std::string last_effect;
+          const std::string name = lamp->get_effect_name();
+          const bool color_changed = seeded && name == last_effect &&
+              (v.get_red() != last_r || v.get_green() != last_g || v.get_blue() != last_b);
+          last_r = v.get_red();
+          last_g = v.get_green();
+          last_b = v.get_blue();
+          last_effect = name;
+          seeded = true;
+
+          // Keep the globals in sync when the effect is changed from HA.
+          static const char *const EFFECTS[] = {${effect_list}};
+          const int count = sizeof(EFFECTS) / sizeof(EFFECTS[0]);
+          for (int i = 0; i < count; i++) {
+            if (name == EFFECTS[i]) {
+              id(effect_index) = i;
+              id(effect_active) = true;
+              if (color_changed) id(show_picked_color).execute();
+              // Covers double click and effect selection from HA alike.
+              if (id(nightlight_active)) {
+                id(nightlight_active) = false;
+                id(restore_brightness_after_nightlight).execute();
+              }
+              return;
+            }
+          }
+          id(effect_active) = false;
+
+binary_sensor:
+  - platform: gpio
+    id: lamp_button
+    name: Lamp Button
+    internal: true
+    pin:
+      number: ${button_pin}
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    filters:
+      - delayed_on_off: 20ms
+    on_multi_click:
+      # ---- Triple click: reset to Warm White @ 60% ----
+      - timing:
+          - ON for at most ${click_max}
+          - OFF for at most ${click_gap}
+          - ON for at most ${click_max}
+          - OFF for at most ${click_gap}
+          - ON for at most ${click_max}
+          - OFF for at least ${click_gap}
+        then:
+          # Sets its own brightness, so skip the post-nightlight restore.
+          - globals.set:
+              id: nightlight_active
+              value: "false"
+          # Effect and transition can't share one call: switch the effect
+          # (colour cross-fades), then fade the brightness to 60%.
+          - light.turn_on:
+              id: lamp_light
+              effect: Warm White
+          - light.turn_on:
+              id: lamp_light
+              brightness: 60%
+              transition_length: ${mode_fade_ms}ms
+          - globals.set:
+              id: effect_index
+              value: "${warm_white_index}"
+          - globals.set:
+              id: effect_active
+              value: "true"
+
+      # ---- Double click: cycle effects ----
+      - timing:
+          - ON for at most ${click_max}
+          - OFF for at most ${click_gap}
+          - ON for at most ${click_max}
+          - OFF for at least ${click_gap}
+        then:
+          - lambda: |-
+              static const char *const EFFECTS[] = {${effect_list}};
+              const int count = sizeof(EFFECTS) / sizeof(EFFECTS[0]);
+              auto *lamp = id(lamp_light);
+
+              int idx = id(effect_index);
+              if (idx < 0 || idx >= count) idx = 0;
+              // While on, always move to the next mode (also from plain
+              // white/nightlight). From OFF, turn on with the remembered mode.
+              if (lamp->remote_values.is_on()) {
+                idx = (idx + 1) % count;
+              }
+              id(effect_index) = idx;
+              id(effect_active) = true;
+
+              // The new effect cross-fades from the current frame on its own.
+              auto call = lamp->turn_on();
+              call.set_effect(std::string(EFFECTS[idx]));
+              call.perform();
+
+      # ---- Single click: toggle with fade ----
+      - timing:
+          - ON for at most ${click_max}
+          - OFF for at least ${click_gap}
+        then:
+          - if:
+              condition:
+                lambda: return id(lamp_light).remote_values.is_on();
+              then:
+                - light.turn_off:
+                    id: lamp_light
+                    transition_length: ${fade_ms}ms
+              else:
+                - script.execute: lamp_restore_on
+
+      # ---- Long press: nightlight when OFF, smooth dimming when ON ----
+      - timing:
+          - ON for at least ${long_press}
+        then:
+          - if:
+              condition:
+                lambda: return !id(lamp_light).remote_values.is_on();
+              then:
+                # While off, remote brightness still holds the last used value.
+                # Don't overwrite it if we're re-entering nightlight from nightlight.
+                - lambda: |-
+                    if (!id(nightlight_active)) {
+                      id(brightness_before_nightlight) = id(lamp_light).remote_values.get_brightness();
+                    }
+                    id(nightlight_active) = true;
+                - light.turn_on:
+                    id: lamp_light
+                    effect: None
+                    # 1% of full output, compensated for the max_brightness_pct
+                    # cap so the warm glow doesn't lose its green and turn red.
+                    brightness: !lambda |-
+                      return std::min(1.0f, 1.0f / ${max_brightness_pct}.0f);
+                    red: 100%
+                    green: 40%
+                    blue: 0%
+                - globals.set:
+                    id: effect_active
+                    value: "false"
+              else:
+                # Reverse direction on every new hold; at a limit, go the only possible way.
+                - lambda: |-
+                    // Brightness chosen by hand now wins over the pre-nightlight value.
+                    id(nightlight_active) = false;
+                    const float b = id(lamp_light).remote_values.get_brightness();
+                    if (b >= 0.999f) {
+                      id(dim_direction) = false;
+                    } else if (b <= 0.011f) {
+                      id(dim_direction) = true;
+                    } else {
+                      id(dim_direction) = !id(dim_direction);
+                    }
+                - while:
+                    condition:
+                      lambda: |-
+                        if (!id(lamp_button).state) return false;
+                        const float b = id(lamp_light).remote_values.get_brightness();
+                        return id(dim_direction) ? b < 1.0f : b > 0.01f;
+                    then:
+                      - lambda: |-
+                          float b = id(lamp_light).remote_values.get_brightness();
+                          b = id(dim_direction) ? b * ${dim_factor}f : b / ${dim_factor}f;
+                          if (b > 1.0f) b = 1.0f;
+                          if (b < 0.01f) b = 0.01f;
+                          auto call = id(lamp_light).turn_on();
+                          call.set_brightness(b);
+                          call.set_transition_length(${dim_step_ms});
+                          call.perform();
+                      - delay: ${dim_step_ms}ms

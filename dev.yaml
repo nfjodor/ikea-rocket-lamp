@@ -1,0 +1,13 @@
+# Local development config: same as example.yaml, but builds from the files in
+# this checkout instead of GitHub.  esphome run dev.yaml
+
+packages:
+  rocket_lamp: !include rocket-lamp.yaml
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
