@@ -173,7 +173,9 @@ light:
             ${fade_begin}
             // Whole-lamp rainbow: every LED shows the same hue, cycling over time.
             const uint16_t hue = (millis() * ${rainbow_speed}) % 0x10000;
-            const Color color = light::ESPHSVColor(hue >> 8, 255, 255).to_rgb();
+            const uint8_t hue8 = hue >> 8;
+            const Color color = light::ESPHSVColor(hue8, 255, 255).to_rgb().gradient(
+                light::ESPHSVColor((uint8_t) (hue8 + 1), 255, 255).to_rgb(), hue & 0xFF);
             auto frame = [&](int32_t) { return color; };
             ${fade_show}
       - addressable_lambda:
