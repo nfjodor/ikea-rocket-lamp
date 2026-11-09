@@ -85,16 +85,22 @@ tiny **CR-4030L** buck converter in the base turns its 24 V into the 5 V the new
 | 1 | IKEA **ICPSW24-3-3** adapter | Comes with the lamp: 24 V DC, max 125 mA / 3 W |
 | 1 | **[CR-4030L buck converter, 6–32 V → 5 V](https://www.aliexpress.com/item/1005005505907937.html)** | Tiny fixed-output step-down module – pick the **6V-32V to 5V** version, which handles the 24 V adapter with headroom. Alternatives must accept 24 V input: an MP1584EN works, a Mini-360 (~23 V max) does not |
 | 1 | **ESP32-C3 Super Mini** | Any ESP32-C3 board works, see [other boards](#using-a-different-board) |
-| 1 | **[WS2812 LED ring, 12 LEDs](https://www.aliexpress.com/item/1005007659632831.html)** | **37 mm** outside / **23 mm** inside diameter – choose the *12 bits* version |
+| 1 | **WS2812 LED ring, 12 LEDs** – [AliExpress](https://www.aliexpress.com/item/1005007659632831.html) or [Adafruit NeoPixel Ring 12](https://www.adafruit.com/product/1643) | **37 mm** outside / **23 mm** inside diameter – choose the *12 bits* (AliExpress) or *12 x RGB LEDs* (Adafruit) version |
 | 1 | **Momentary push button** | Normally open, wired to GND |
 | – | Thin silicone wire, heat-shrink, hot glue / double-sided foam tape | Keep everything insulated and fixed |
 
 #### 🛒 Where to buy
 
-The parts used in the original build, both from AliExpress:
+The parts used in the original build come from AliExpress:
 
 - **LED ring:** [WS2812 RGB LED ring, 37 mm](https://www.aliexpress.com/item/1005007659632831.html) – select the **12 bits** version
 - **Buck converter:** [CR-4030L DC-DC step-down module](https://www.aliexpress.com/item/1005005505907937.html) – select the **6V-32V to 5V** version
+
+A good alternative LED ring:
+
+- **LED ring:** [Adafruit NeoPixel Ring – 12 x 5050 RGB LED](https://www.adafruit.com/product/1643) – same size
+  (36.8 mm outside / 23.3 mm inside), ships with WS2812B or SK6812 LEDs (same protocol) and is available
+  from many local distributors. Select **12 x RGB LEDs** – the RGBW and WWA variants won't work with this firmware.
 
 > [!NOTE]
 > Marketplace listings change over time. If a link is dead, search for the part name and check the
