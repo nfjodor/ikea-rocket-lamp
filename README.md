@@ -347,7 +347,7 @@ colour and every effect.
 | **Click** | Fade on with the last brightness and mode | Fade off |
 | **Double click** | Turn on in the last used mode | Cross-fade to the next mode |
 | **Triple click** | Reset to **Warm White @ 60 %** | Reset to **Warm White @ 60 %** |
-| **Hold** (≥ 0.7 s) | 🌙 Warm nightlight at 1 % ([adjustable](#-customisation)) | 🔅 Dim / brighten while held – direction flips on every new hold |
+| **Hold** (≥ 0.7 s) | 🌙 Warm nightlight at 1 % ([adjustable](#-customisation)) | 🔅 Dim / brighten while held – direction flips on every new hold (does nothing in nightlight) |
 
 **Mode cycle (double click):**
 🌈 Rainbow → 🕯️ Candle → 🔆 Warm White → 🔴 Red → 🔵 Blue → 🟢 Green → 🟡 Yellow → 🟣 Purple → 🌸 Pink → 🌈 …

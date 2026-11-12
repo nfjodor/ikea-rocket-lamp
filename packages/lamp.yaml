@@ -423,32 +423,35 @@ binary_sensor:
                     id: effect_active
                     value: "false"
               else:
-                # Reverse direction on every new hold; at a limit, go the only possible way.
-                - lambda: |-
-                    // Brightness chosen by hand now wins over the pre-nightlight value.
-                    id(nightlight_active) = false;
-                    const float b = id(lamp_light).remote_values.get_brightness();
-                    if (b >= 0.999f) {
-                      id(dim_direction) = false;
-                    } else if (b <= 0.011f) {
-                      id(dim_direction) = true;
-                    } else {
-                      id(dim_direction) = !id(dim_direction);
-                    }
-                - while:
+                # No dimming in nightlight; it keeps its fixed level.
+                - if:
                     condition:
-                      lambda: |-
-                        if (!id(lamp_button).state) return false;
-                        const float b = id(lamp_light).remote_values.get_brightness();
-                        return id(dim_direction) ? b < 1.0f : b > 0.01f;
+                      lambda: return !id(nightlight_active);
                     then:
+                      # Reverse direction on every new hold; at a limit, go the only possible way.
                       - lambda: |-
-                          float b = id(lamp_light).remote_values.get_brightness();
-                          b = id(dim_direction) ? b * ${dim_factor}f : b / ${dim_factor}f;
-                          if (b > 1.0f) b = 1.0f;
-                          if (b < 0.01f) b = 0.01f;
-                          auto call = id(lamp_light).turn_on();
-                          call.set_brightness(b);
-                          call.set_transition_length(${dim_step_ms});
-                          call.perform();
-                      - delay: ${dim_step_ms}ms
+                          const float b = id(lamp_light).remote_values.get_brightness();
+                          if (b >= 0.999f) {
+                            id(dim_direction) = false;
+                          } else if (b <= 0.011f) {
+                            id(dim_direction) = true;
+                          } else {
+                            id(dim_direction) = !id(dim_direction);
+                          }
+                      - while:
+                          condition:
+                            lambda: |-
+                              if (!id(lamp_button).state) return false;
+                              const float b = id(lamp_light).remote_values.get_brightness();
+                              return id(dim_direction) ? b < 1.0f : b > 0.01f;
+                          then:
+                            - lambda: |-
+                                float b = id(lamp_light).remote_values.get_brightness();
+                                b = id(dim_direction) ? b * ${dim_factor}f : b / ${dim_factor}f;
+                                if (b > 1.0f) b = 1.0f;
+                                if (b < 0.01f) b = 0.01f;
+                                auto call = id(lamp_light).turn_on();
+                                call.set_brightness(b);
+                                call.set_transition_length(${dim_step_ms});
+                                call.perform();
+                            - delay: ${dim_step_ms}ms
