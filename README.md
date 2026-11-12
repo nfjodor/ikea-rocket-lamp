@@ -347,7 +347,7 @@ colour and every effect.
 | **Click** | Fade on with the last brightness and mode | Fade off |
 | **Double click** | Turn on in the last used mode | Cross-fade to the next mode |
 | **Triple click** | Reset to **Warm White @ 60 %** | Reset to **Warm White @ 60 %** |
-| **Hold** (≥ 0.7 s) | 🌙 Warm nightlight at 1 % | 🔅 Dim / brighten while held – direction flips on every new hold |
+| **Hold** (≥ 0.7 s) | 🌙 Warm nightlight at 1 % ([adjustable](#-customisation)) | 🔅 Dim / brighten while held – direction flips on every new hold |
 
 **Mode cycle (double click):**
 🌈 Rainbow → 🕯️ Candle → 🔆 Warm White → 🔴 Red → 🔵 Blue → 🟢 Green → 🟡 Yellow → 🟣 Purple → 🌸 Pink → 🌈 …
@@ -420,14 +420,9 @@ whose green and blue are much brighter than their red.
 | `yellow_color` | `255, 180, 0` | 🟡 Solid Yellow |
 | `purple_color` | `170, 0, 255` | 🟣 Solid Purple |
 | `pink_color` | `255, 40, 120` | 🌸 Solid Pink |
-| `nightlight_color` | `255, 102, 0` | 🌙 Nightlight |
 
-The Candle colour is set with `candle_color`, see below. Colours with more of each channel draw more
-current – the [power budget](#power-budget) figures assume the defaults.
-
-The nightlight always runs at 1 %, so only the mix of `nightlight_color` matters: `128, 51, 0` looks the
-same as `255, 102, 0`. At such a low level each channel only has a few steps, so a channel set much lower
-than the others can drop out completely.
+The Candle and Nightlight colours are set with `candle_color` and `nightlight_color`, see below. Colours
+with more of each channel draw more current – the [power budget](#power-budget) figures assume the defaults.
 
 </details>
 
@@ -442,6 +437,23 @@ than the others can drop out completely.
 | `candle_flicker_depth` | `0.25` | Max dip of a normal flicker (0–1, 0.25 = up to 25 % darker) |
 | `candle_dip_depth` | `0.55` | Max dip of an occasional deep flicker (0–1) |
 | `candle_dip_chance` | `0.08` | Chance that the next flicker is a deep one (0–1) |
+
+</details>
+
+<details>
+<summary><b>Nightlight</b></summary>
+
+| Substitution | Default | Description |
+| ------------ | ------- | ----------- |
+| `nightlight_brightness_pct` | `1` | Brightness in % of the LEDs' full output |
+| `nightlight_color` | `255, 102, 0` | Red, green, blue (0–255) of the glow |
+
+`nightlight_brightness_pct` is measured against the LEDs' full output, not the `max_brightness_pct` cap,
+so the nightlight looks the same whatever the cap is. It can't go above the cap, though.
+
+Only the mix of `nightlight_color` matters, the level comes from `nightlight_brightness_pct`:
+`128, 51, 0` looks the same as `255, 102, 0`. At low levels each channel only has a few steps, so a
+channel set much lower than the others can drop out completely.
 
 </details>
 
@@ -578,7 +590,7 @@ the GitHub URL, so every edit is picked up on the next build.
 | `Secret ... not defined` | Add the missing key to the `secrets.yaml` next to your device config. |
 | Colours are swapped (red shows green) | Set `led_rgb_order` to match your LEDs, e.g. `RGB`. |
 | Only some LEDs light up | Set `num_leds` to the actual number of LEDs on your ring. |
-| Nightlight is completely dark | Some LEDs can't show 1 %, which is why `gamma_correct` is `1.0` and the nightlight brightness is compensated for `max_brightness_pct`. Check the LED supply and ground connections. |
+| Nightlight is completely dark | Some LEDs can't show 1 %, which is why `gamma_correct` is `1.0` and the nightlight brightness is compensated for `max_brightness_pct`. Check the LED supply and ground connections, or raise `nightlight_brightness_pct` (e.g. `"2"`). |
 | Package changes don't show up | Remote packages are cached – run `esphome clean <config>.yaml` or use `refresh: 0s`. |
 
 ---

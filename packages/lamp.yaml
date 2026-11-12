@@ -38,7 +38,12 @@ substitutions:
   purple_color: "170, 0, 255"
   # A touch of green softens magenta into pink.
   pink_color: "255, 40, 120"
-  # Nightlight glow. Only the mix matters: it always runs at 1% brightness.
+
+  # Nightlight
+  # Percent of the LEDs' full output, independent of max_brightness_pct (but
+  # never above it). Each channel only has a few steps this low.
+  nightlight_brightness_pct: "1"
+  # R, G, B. Only the mix matters, the level comes from the brightness above.
   nightlight_color: "255, 102, 0"
 
   # Candle
@@ -89,7 +94,7 @@ globals:
     restore_value: yes
     # Start in "Warm White" mode so the first turn-on matches effect_index.
     initial_value: "true"
-  # Nightlight overwrites the brightness with 1%; the previous brightness is
+  # Nightlight overwrites the brightness; the previous brightness is
   # kept here and restored when a mode is selected again.
   - id: nightlight_active
     type: bool
@@ -407,10 +412,10 @@ binary_sensor:
                 - light.turn_on:
                     id: lamp_light
                     effect: None
-                    # 1% of full output, compensated for the max_brightness_pct
+                    # Percent of full output, compensated for the max_brightness_pct
                     # cap so the warm glow doesn't lose its green and turn red.
                     brightness: !lambda |-
-                      return std::min(1.0f, 1.0f / ${max_brightness_pct}.0f);
+                      return std::min(1.0f, ${nightlight_brightness_pct} / ${max_brightness_pct}.0f);
                     red: !lambda return Color(${nightlight_color}).r / 255.0f;
                     green: !lambda return Color(${nightlight_color}).g / 255.0f;
                     blue: !lambda return Color(${nightlight_color}).b / 255.0f;
