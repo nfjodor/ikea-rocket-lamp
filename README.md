@@ -405,13 +405,57 @@ in the `substitutions:` block of your own device config, no fork required.
 
 </details>
 
-**Example** – a second rocket for the kids' room with a slower rainbow and snappier double clicks:
+<details>
+<summary><b>Mode colours</b></summary>
+
+Each colour is `red, green, blue` with values from 0 to 255. The defaults are tuned for WS2812 LEDs,
+whose green and blue are much brighter than their red.
+
+| Substitution | Default | Mode |
+| ------------ | ------- | ---- |
+| `warm_white_color` | `255, 138, 12` | 🔆 Warm White |
+| `red_color` | `255, 0, 0` | 🔴 Solid Red |
+| `blue_color` | `0, 0, 255` | 🔵 Solid Blue |
+| `green_color` | `0, 255, 0` | 🟢 Solid Green |
+| `yellow_color` | `255, 180, 0` | 🟡 Solid Yellow |
+| `purple_color` | `170, 0, 255` | 🟣 Solid Purple |
+| `pink_color` | `255, 40, 120` | 🌸 Solid Pink |
+| `nightlight_color` | `255, 102, 0` | 🌙 Nightlight |
+
+The Candle colour is set with `candle_color`, see below. Colours with more of each channel draw more
+current – the [power budget](#power-budget) figures assume the defaults.
+
+The nightlight always runs at 1 %, so only the mix of `nightlight_color` matters: `128, 51, 0` looks the
+same as `255, 102, 0`. At such a low level each channel only has a few steps, so a channel set much lower
+than the others can drop out completely.
+
+</details>
+
+<details>
+<summary><b>Candle</b></summary>
+
+| Substitution | Default | Description |
+| ------------ | ------- | ----------- |
+| `candle_color` | `255, 138, 12` | Red, green, blue (0–255) of the flame |
+| `candle_update_interval` | `16ms` | Frame interval – smoothing is applied per frame, so a longer interval also slows the flicker |
+| `candle_smoothing` | `0.25` | How far the flame moves towards its next brightness each frame (0–1, higher = jumpier) |
+| `candle_flicker_depth` | `0.25` | Max dip of a normal flicker (0–1, 0.25 = up to 25 % darker) |
+| `candle_dip_depth` | `0.55` | Max dip of an occasional deep flicker (0–1) |
+| `candle_dip_chance` | `0.08` | Chance that the next flicker is a deep one (0–1) |
+
+</details>
+
+**Example** – a second rocket for the kids' room with a slower rainbow, a calmer, more orange candle
+and snappier double clicks:
 
 ```yaml
 substitutions:
   name: kids-room-rocket
   friendly_name: Kids Room Rocket
   rainbow_speed: "1"
+  candle_color: "255, 100, 0"
+  candle_smoothing: "0.1"
+  candle_dip_chance: "0.02"
   click_gap: 300ms
 ```
 
