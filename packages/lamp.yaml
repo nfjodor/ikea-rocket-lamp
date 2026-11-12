@@ -366,9 +366,9 @@ binary_sensor:
 
               int idx = id(effect_index);
               if (idx < 0 || idx >= count) idx = 0;
-              // While on, always move to the next mode (also from plain
-              // white/nightlight). From OFF, turn on with the remembered mode.
-              if (lamp->remote_values.is_on()) {
+              // While on, move to the next mode (also from plain white). From
+              // OFF or nightlight, return to the remembered mode.
+              if (lamp->remote_values.is_on() && !id(nightlight_active)) {
                 idx = (idx + 1) % count;
               }
               id(effect_index) = idx;
