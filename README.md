@@ -352,9 +352,10 @@ colour and every effect.
 **Mode cycle (double click):**
 🌈 Rainbow → 🕯️ Candle → 🔆 Warm White → 🔴 Red → 🔵 Blue → 🟢 Green → 🟡 Yellow → 🟣 Purple → 🌸 Pink → 🌈 …
 
-**From Home Assistant** you can pick any effect, brightness or colour. Picking a colour while an
-effect is running stops the effect so your colour shows, and leaving the nightlight for a mode
-brings back the brightness you had before.
+**From Home Assistant** you can pick any effect, brightness or colour. The **Nightlight** is in the
+effect list too (it's not part of the double-click cycle) and fades to the nightlight level, just like
+holding the button. Picking a colour while an effect is running stops the effect so your colour
+shows, and leaving the nightlight for a mode brings back the brightness you had before.
 
 > [!TIP]
 > A rocket that glows dim red at bedtime and fades off automatically makes a great Home Assistant

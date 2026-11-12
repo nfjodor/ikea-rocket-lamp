@@ -45,6 +45,10 @@ substitutions:
   nightlight_brightness_pct: "1"
   # R, G, B. Only the mix matters, the level comes from the brightness above.
   nightlight_color: "255, 102, 0"
+  # Derived light brightness of the nightlight, don't override. Compensated
+  # for the max_brightness_pct cap so the warm glow doesn't lose its green
+  # and turn red.
+  nightlight_level: std::min(1.0f, ${nightlight_brightness_pct} / ${max_brightness_pct}.0f)
 
   # Candle
   candle_color: "255, 138, 12"   # R, G, B of the flame
@@ -88,7 +92,8 @@ globals:
     type: int
     restore_value: yes
     initial_value: "${warm_white_index}"
-  # true while one of the cycle effects is showing; used to restore it on turn-on
+  # true while one of the cycle effects or the Nightlight is showing; used to
+  # restore it on turn-on
   - id: effect_active
     type: bool
     restore_value: yes
@@ -128,6 +133,15 @@ script:
           static const char *const EFFECTS[] = {${effect_list}};
           const int count = sizeof(EFFECTS) / sizeof(EFFECTS[0]);
           auto *lamp = id(lamp_light);
+
+          // Nightlight has a fixed level, and its effect fades in on its own.
+          if (id(effect_active) && id(nightlight_active)) {
+            auto call = lamp->turn_on();
+            call.set_effect(std::string("Nightlight"));
+            call.set_brightness(${nightlight_level});
+            call.perform();
+            return;
+          }
 
           float target = lamp->remote_values.get_brightness();
           if (target < 0.01f) target = 1.0f;
@@ -171,6 +185,20 @@ script:
             const float b = id(brightness_before_nightlight);
             return b < 0.01f ? 1.0f : b;
           transition_length: ${mode_fade_ms}ms
+
+  # Nightlight picked in HA: drop to the nightlight level. Fades when switching
+  # from another mode; when turning on, the effect already fades in from black.
+  - id: apply_nightlight_brightness
+    mode: restart
+    parameters:
+      fade: bool
+    then:
+      # Deferred for the same reason as above.
+      - delay: 0s
+      - light.turn_on:
+          id: lamp_light
+          brightness: !lambda return ${nightlight_level};
+          transition_length: !lambda "return fade ? ${mode_fade_ms} : 0;"
 
 light:
   - platform: esp32_rmt_led_strip
@@ -270,10 +298,21 @@ light:
             ${fade_begin}
             auto frame = [](int32_t) { return Color(${pink_color}); };
             ${fade_show}
+      # Not part of the double-click cycle (effect_list).
+      - addressable_lambda:
+          name: Nightlight
+          update_interval: 16ms
+          lambda: |-
+            ${fade_begin}
+            auto frame = [](int32_t) { return Color(${nightlight_color}); };
+            ${fade_show}
     on_state:
       - lambda: |-
           auto *lamp = id(lamp_light);
           const auto &v = lamp->remote_values;
+          static bool was_on = false;
+          const bool turned_on = v.is_on() && !was_on;
+          was_on = v.is_on();
           if (!v.is_on()) return;
 
           // A colour change while an effect runs can only come from HA (the
@@ -285,11 +324,32 @@ light:
           const std::string name = lamp->get_effect_name();
           const bool color_changed = seeded && name == last_effect &&
               (v.get_red() != last_r || v.get_green() != last_g || v.get_blue() != last_b);
+          const bool entered_nightlight = name == "Nightlight" &&
+              (turned_on || last_effect != "Nightlight");
           last_r = v.get_red();
           last_g = v.get_green();
           last_b = v.get_blue();
           last_effect = name;
           seeded = true;
+
+          if (name == "Nightlight") {
+            id(effect_active) = true;
+            if (color_changed) {
+              id(show_picked_color).execute();
+              return;
+            }
+            if (entered_nightlight) {
+              // Picked in HA; the button sets these itself before switching.
+              if (!id(nightlight_active)) {
+                id(brightness_before_nightlight) = v.get_brightness();
+                id(nightlight_active) = true;
+              }
+              if (std::abs(v.get_brightness() - ${nightlight_level}) > 0.001f) {
+                id(apply_nightlight_brightness).execute(!turned_on);
+              }
+            }
+            return;
+          }
 
           // Keep the globals in sync when the effect is changed from HA.
           static const char *const EFFECTS[] = {${effect_list}};
@@ -409,19 +469,11 @@ binary_sensor:
                       id(brightness_before_nightlight) = id(lamp_light).remote_values.get_brightness();
                     }
                     id(nightlight_active) = true;
+                # The effect fades in from black on its own.
                 - light.turn_on:
                     id: lamp_light
-                    effect: None
-                    # Percent of full output, compensated for the max_brightness_pct
-                    # cap so the warm glow doesn't lose its green and turn red.
-                    brightness: !lambda |-
-                      return std::min(1.0f, ${nightlight_brightness_pct} / ${max_brightness_pct}.0f);
-                    red: !lambda return Color(${nightlight_color}).r / 255.0f;
-                    green: !lambda return Color(${nightlight_color}).g / 255.0f;
-                    blue: !lambda return Color(${nightlight_color}).b / 255.0f;
-                - globals.set:
-                    id: effect_active
-                    value: "false"
+                    effect: Nightlight
+                    brightness: !lambda return ${nightlight_level};
               else:
                 # No dimming in nightlight; it keeps its fixed level.
                 - if:
