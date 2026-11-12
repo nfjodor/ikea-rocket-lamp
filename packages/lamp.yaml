@@ -189,7 +189,7 @@ light:
               const float depth = random_float() < 0.08f ? 0.55f : 0.25f;
               target = 255.0f * (1.0f - depth * random_float());
             }
-            const Color color = Color(255, 110, 20) * (uint8_t) level;
+            const Color color = Color(255, 138, 12) * (uint8_t) level;
             auto frame = [&](int32_t) { return color; };
             ${fade_show}
       - addressable_lambda:
