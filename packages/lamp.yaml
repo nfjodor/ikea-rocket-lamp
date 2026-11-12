@@ -198,7 +198,7 @@ light:
           lambda: |-
             ${fade_begin}
             // ~2700-3000 K look on WS2812, whose blue is strong; equal RGB looks cold.
-            auto frame = [](int32_t) { return Color(255, 150, 60); };
+            auto frame = [](int32_t) { return Color(255, 138, 12); };
             ${fade_show}
       - addressable_lambda:
           name: Solid Red
