@@ -344,7 +344,7 @@ colour and every effect.
 
 | Gesture | When the lamp is **off** | When the lamp is **on** |
 | ------- | ------------------------ | ----------------------- |
-| **Click** | Fade on with the last brightness and mode | Fade off |
+| **Click** | Fade on with the last brightness and mode (turned off in nightlight: the mode and brightness from before it) | Fade off |
 | **Double click** | Turn on in the last used mode | Cross-fade to the next mode (from the nightlight: back to the last used mode) |
 | **Triple click** | Reset to **Warm White @ 60 %** | Reset to **Warm White @ 60 %** |
 | **Hold** (≥ 0.7 s) | 🌙 Warm nightlight at 1 % ([adjustable](#-customisation)) | 🔅 Dim / brighten while held – direction flips on every new hold (does nothing in nightlight) |

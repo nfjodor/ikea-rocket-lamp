@@ -92,15 +92,16 @@ globals:
     type: int
     restore_value: yes
     initial_value: "${warm_white_index}"
-  # true while one of the cycle effects or the Nightlight is showing; used to
-  # restore it on turn-on
+  # true while one of the cycle effects is showing; used to restore it on turn-on.
+  # Left untouched by the nightlight, so it still describes the mode before it.
   - id: effect_active
     type: bool
     restore_value: yes
     # Start in "Warm White" mode so the first turn-on matches effect_index.
     initial_value: "true"
   # Nightlight overwrites the brightness; the previous brightness is
-  # kept here and restored when a mode is selected again.
+  # kept here and restored when a mode is selected again or the lamp is
+  # clicked back on.
   - id: nightlight_active
     type: bool
     restore_value: yes
@@ -134,16 +135,13 @@ script:
           const int count = sizeof(EFFECTS) / sizeof(EFFECTS[0]);
           auto *lamp = id(lamp_light);
 
-          // Nightlight has a fixed level, and its effect fades in on its own.
-          if (id(effect_active) && id(nightlight_active)) {
-            auto call = lamp->turn_on();
-            call.set_effect(std::string("Nightlight"));
-            call.set_brightness(${nightlight_level});
-            call.perform();
-            return;
-          }
-
           float target = lamp->remote_values.get_brightness();
+          // Turned off in nightlight: come back in the mode and brightness from
+          // before it. effect_active / effect_index still describe that mode.
+          if (id(nightlight_active)) {
+            id(nightlight_active) = false;
+            target = id(brightness_before_nightlight);
+          }
           if (target < 0.01f) target = 1.0f;
 
           if (id(effect_active)) {
@@ -333,7 +331,6 @@ light:
           seeded = true;
 
           if (name == "Nightlight") {
-            id(effect_active) = true;
             if (color_changed) {
               id(show_picked_color).execute();
               return;
