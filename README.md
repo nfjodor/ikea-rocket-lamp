@@ -361,6 +361,59 @@ shows, and leaving the nightlight for a mode brings back the brightness you had 
 > A rocket that glows dim red at bedtime and fades off automatically makes a great Home Assistant
 > automation for the kids' room.
 
+### Remote buttons
+
+The button gestures are also Home Assistant actions, so a Zigbee or other wireless button can work
+exactly like the lamp's own button:
+
+| Action | Does the same as |
+| ------ | ---------------- |
+| `esphome.<device>_button_click` | Click |
+| `esphome.<device>_button_double_click` | Double click |
+| `esphome.<device>_button_triple_click` | Triple click |
+| `esphome.<device>_button_hold` | Hold – nightlight, or dimming until `button_release` |
+| `esphome.<device>_button_release` | Letting go of the button after a hold |
+
+`<device>` is the ESPHome device name with `-` replaced by `_` (e.g. `rocket_lamp`). If the release
+never arrives, dimming stops at the brightness limit.
+
+<details>
+<summary><b>Example: Aqara Wireless Mini Switch (ZHA)</b></summary>
+
+```yaml
+alias: Rocket Lamp – Aqara button
+mode: queued
+triggers:
+  - trigger: device
+    domain: zha
+    device_id: YOUR_BUTTON_DEVICE_ID
+    type: remote_button_short_press
+    subtype: remote_button_short_press
+    id: click
+  - trigger: device
+    domain: zha
+    device_id: YOUR_BUTTON_DEVICE_ID
+    type: remote_button_double_press
+    subtype: remote_button_double_press
+    id: double_click
+  - trigger: device
+    domain: zha
+    device_id: YOUR_BUTTON_DEVICE_ID
+    type: remote_button_long_press
+    subtype: remote_button_long_press
+    id: hold
+  - trigger: device
+    domain: zha
+    device_id: YOUR_BUTTON_DEVICE_ID
+    type: remote_button_long_release
+    subtype: remote_button_long_release
+    id: release
+actions:
+  - action: esphome.rocket_lamp_button_{{ trigger.id }}
+```
+
+</details>
+
 ## 🎨 Customisation
 
 Every value below is a [substitution](https://esphome.io/components/substitutions/) – override it
@@ -557,7 +610,7 @@ rocket-lamp/
 ├── rocket-lamp.yaml                     # 📦 main package – point your config here
 ├── packages/
 │   ├── board-esp32-c3-supermini.yaml    # 🧩 board: chip, Wi-Fi tuning, pins
-│   └── lamp.yaml                        # 🧩 lamp: light, effects, button logic
+│   └── lamp.yaml                        # 🧩 lamp: light, effects, button logic, remote actions
 ├── example.yaml                         # 📝 device config that pulls from GitHub
 ├── dev.yaml                             # 🛠️ device config that builds from this checkout
 ├── secrets.example.yaml                 # 🔑 template for secrets.yaml

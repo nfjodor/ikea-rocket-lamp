@@ -115,6 +115,12 @@ globals:
     type: bool
     restore_value: no
     initial_value: "true"
+  # true between the button_hold and button_release API actions; keeps the
+  # dimming loop going like holding the lamp's own button does.
+  - id: remote_held
+    type: bool
+    restore_value: no
+    initial_value: "false"
   # Cross-fade state, see fade_begin / fade_show above.
   - id: fade_from
     type: std::vector<esphome::Color>
@@ -197,6 +203,153 @@ script:
           id: lamp_light
           brightness: !lambda return ${nightlight_level};
           transition_length: !lambda "return fade ? ${mode_fade_ms} : 0;"
+
+  # Button gestures. Run by the lamp's button and by the API actions below, so
+  # a remote (e.g. a Zigbee button in HA) behaves exactly like the lamp's button.
+
+  # ---- Click: toggle with fade ----
+  - id: lamp_click
+    then:
+      - if:
+          condition:
+            lambda: return id(lamp_light).remote_values.is_on();
+          then:
+            - light.turn_off:
+                id: lamp_light
+                transition_length: ${fade_ms}ms
+          else:
+            - script.execute: lamp_restore_on
+
+  # ---- Double click: cycle effects ----
+  - id: lamp_double_click
+    then:
+      - lambda: |-
+          static const char *const EFFECTS[] = {${effect_list}};
+          const int count = sizeof(EFFECTS) / sizeof(EFFECTS[0]);
+          auto *lamp = id(lamp_light);
+
+          int idx = id(effect_index);
+          if (idx < 0 || idx >= count) idx = 0;
+          // While on, move to the next mode (also from plain white). From
+          // OFF or nightlight, return to the remembered mode.
+          if (lamp->remote_values.is_on() && !id(nightlight_active)) {
+            idx = (idx + 1) % count;
+          }
+          id(effect_index) = idx;
+          id(effect_active) = true;
+
+          // The new effect cross-fades from the current frame on its own.
+          auto call = lamp->turn_on();
+          call.set_effect(std::string(EFFECTS[idx]));
+          call.perform();
+
+  # ---- Triple click: reset to Warm White @ 60% ----
+  - id: lamp_triple_click
+    then:
+      # Sets its own brightness, so skip the post-nightlight restore.
+      - globals.set:
+          id: nightlight_active
+          value: "false"
+      # Effect and transition can't share one call: switch the effect
+      # (colour cross-fades), then fade the brightness to 60%.
+      - light.turn_on:
+          id: lamp_light
+          effect: Warm White
+      - light.turn_on:
+          id: lamp_light
+          brightness: 60%
+          transition_length: ${mode_fade_ms}ms
+      - globals.set:
+          id: effect_index
+          value: "${warm_white_index}"
+      - globals.set:
+          id: effect_active
+          value: "true"
+
+  # ---- Hold: nightlight when OFF, smooth dimming when ON ----
+  # Dims while the lamp's button is held or until the button_release action.
+  - id: lamp_hold
+    mode: restart
+    then:
+      - if:
+          condition:
+            lambda: return !id(lamp_light).remote_values.is_on();
+          then:
+            # While off, remote brightness still holds the last used value.
+            # Don't overwrite it if we're re-entering nightlight from nightlight.
+            - lambda: |-
+                if (!id(nightlight_active)) {
+                  id(brightness_before_nightlight) = id(lamp_light).remote_values.get_brightness();
+                }
+                id(nightlight_active) = true;
+            # The effect fades in from black on its own.
+            - light.turn_on:
+                id: lamp_light
+                effect: Nightlight
+                brightness: !lambda return ${nightlight_level};
+          else:
+            # No dimming in nightlight; it keeps its fixed level.
+            - if:
+                condition:
+                  lambda: return !id(nightlight_active);
+                then:
+                  # Reverse direction on every new hold; at a limit, go the only possible way.
+                  - lambda: |-
+                      const float b = id(lamp_light).remote_values.get_brightness();
+                      if (b >= 0.999f) {
+                        id(dim_direction) = false;
+                      } else if (b <= 0.011f) {
+                        id(dim_direction) = true;
+                      } else {
+                        id(dim_direction) = !id(dim_direction);
+                      }
+                  - while:
+                      condition:
+                        lambda: |-
+                          if (!id(lamp_button).state && !id(remote_held)) return false;
+                          const float b = id(lamp_light).remote_values.get_brightness();
+                          return id(dim_direction) ? b < 1.0f : b > 0.01f;
+                      then:
+                        - lambda: |-
+                            float b = id(lamp_light).remote_values.get_brightness();
+                            b = id(dim_direction) ? b * ${dim_factor}f : b / ${dim_factor}f;
+                            if (b > 1.0f) b = 1.0f;
+                            if (b < 0.01f) b = 0.01f;
+                            auto call = id(lamp_light).turn_on();
+                            call.set_brightness(b);
+                            call.set_transition_length(${dim_step_ms});
+                            call.perform();
+                        - delay: ${dim_step_ms}ms
+      # A missed button_release only dims until the limit, then clears here.
+      - globals.set:
+          id: remote_held
+          value: "false"
+
+# Remote control: the button gestures as Home Assistant actions, named
+# esphome.<device_name>_button_click etc. For hold, call button_hold when the
+# remote is pressed and held and button_release when it's let go.
+api:
+  actions:
+    - action: button_click
+      then:
+        - script.execute: lamp_click
+    - action: button_double_click
+      then:
+        - script.execute: lamp_double_click
+    - action: button_triple_click
+      then:
+        - script.execute: lamp_triple_click
+    - action: button_hold
+      then:
+        - globals.set:
+            id: remote_held
+            value: "true"
+        - script.execute: lamp_hold
+    - action: button_release
+      then:
+        - globals.set:
+            id: remote_held
+            value: "false"
 
 light:
   - platform: esp32_rmt_led_strip
@@ -379,8 +532,8 @@ binary_sensor:
         pullup: true
     filters:
       - delayed_on_off: 20ms
+    # The gestures live in the lamp_* scripts above, shared with the API actions.
     on_multi_click:
-      # ---- Triple click: reset to Warm White @ 60% ----
       - timing:
           - ON for at most ${click_max}
           - OFF for at most ${click_gap}
@@ -389,118 +542,21 @@ binary_sensor:
           - ON for at most ${click_max}
           - OFF for at least ${click_gap}
         then:
-          # Sets its own brightness, so skip the post-nightlight restore.
-          - globals.set:
-              id: nightlight_active
-              value: "false"
-          # Effect and transition can't share one call: switch the effect
-          # (colour cross-fades), then fade the brightness to 60%.
-          - light.turn_on:
-              id: lamp_light
-              effect: Warm White
-          - light.turn_on:
-              id: lamp_light
-              brightness: 60%
-              transition_length: ${mode_fade_ms}ms
-          - globals.set:
-              id: effect_index
-              value: "${warm_white_index}"
-          - globals.set:
-              id: effect_active
-              value: "true"
-
-      # ---- Double click: cycle effects ----
+          - script.execute: lamp_triple_click
       - timing:
           - ON for at most ${click_max}
           - OFF for at most ${click_gap}
           - ON for at most ${click_max}
           - OFF for at least ${click_gap}
         then:
-          - lambda: |-
-              static const char *const EFFECTS[] = {${effect_list}};
-              const int count = sizeof(EFFECTS) / sizeof(EFFECTS[0]);
-              auto *lamp = id(lamp_light);
-
-              int idx = id(effect_index);
-              if (idx < 0 || idx >= count) idx = 0;
-              // While on, move to the next mode (also from plain white). From
-              // OFF or nightlight, return to the remembered mode.
-              if (lamp->remote_values.is_on() && !id(nightlight_active)) {
-                idx = (idx + 1) % count;
-              }
-              id(effect_index) = idx;
-              id(effect_active) = true;
-
-              // The new effect cross-fades from the current frame on its own.
-              auto call = lamp->turn_on();
-              call.set_effect(std::string(EFFECTS[idx]));
-              call.perform();
-
-      # ---- Single click: toggle with fade ----
+          - script.execute: lamp_double_click
       - timing:
           - ON for at most ${click_max}
           - OFF for at least ${click_gap}
         then:
-          - if:
-              condition:
-                lambda: return id(lamp_light).remote_values.is_on();
-              then:
-                - light.turn_off:
-                    id: lamp_light
-                    transition_length: ${fade_ms}ms
-              else:
-                - script.execute: lamp_restore_on
-
-      # ---- Long press: nightlight when OFF, smooth dimming when ON ----
+          - script.execute: lamp_click
+      # Dims while the button stays pressed (see lamp_hold).
       - timing:
           - ON for at least ${long_press}
         then:
-          - if:
-              condition:
-                lambda: return !id(lamp_light).remote_values.is_on();
-              then:
-                # While off, remote brightness still holds the last used value.
-                # Don't overwrite it if we're re-entering nightlight from nightlight.
-                - lambda: |-
-                    if (!id(nightlight_active)) {
-                      id(brightness_before_nightlight) = id(lamp_light).remote_values.get_brightness();
-                    }
-                    id(nightlight_active) = true;
-                # The effect fades in from black on its own.
-                - light.turn_on:
-                    id: lamp_light
-                    effect: Nightlight
-                    brightness: !lambda return ${nightlight_level};
-              else:
-                # No dimming in nightlight; it keeps its fixed level.
-                - if:
-                    condition:
-                      lambda: return !id(nightlight_active);
-                    then:
-                      # Reverse direction on every new hold; at a limit, go the only possible way.
-                      - lambda: |-
-                          const float b = id(lamp_light).remote_values.get_brightness();
-                          if (b >= 0.999f) {
-                            id(dim_direction) = false;
-                          } else if (b <= 0.011f) {
-                            id(dim_direction) = true;
-                          } else {
-                            id(dim_direction) = !id(dim_direction);
-                          }
-                      - while:
-                          condition:
-                            lambda: |-
-                              if (!id(lamp_button).state) return false;
-                              const float b = id(lamp_light).remote_values.get_brightness();
-                              return id(dim_direction) ? b < 1.0f : b > 0.01f;
-                          then:
-                            - lambda: |-
-                                float b = id(lamp_light).remote_values.get_brightness();
-                                b = id(dim_direction) ? b * ${dim_factor}f : b / ${dim_factor}f;
-                                if (b > 1.0f) b = 1.0f;
-                                if (b < 0.01f) b = 0.01f;
-                                auto call = id(lamp_light).turn_on();
-                                call.set_brightness(b);
-                                call.set_transition_length(${dim_step_ms});
-                                call.perform();
-                            - delay: ${dim_step_ms}ms
+          - script.execute: lamp_hold
